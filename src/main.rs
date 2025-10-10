@@ -1,10 +1,19 @@
 use clap::Parser;
 use rabbitmq_http_client::blocking_api::Client;
 use regex::Regex;
+use url::Url;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
+    #[arg(
+        short,
+        long,
+        default_value = "http://guest:guest@localhost:15672/api",
+        help = "URL to RabbitMQ API"
+    )]
+    url: String,
+
     #[arg(short, long, default_value = ".+", help = "Regex filter for names")]
     filter: String,
 
@@ -21,15 +30,25 @@ struct Args {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    let endpoint = "http://localhost:15672/api";
-    let username = "guest";
-    let password = "guest";
-    let rc = Client::new(endpoint, username, password);
+    let url = Url::parse(&args.url)?;
+    let endpoint = format!(
+        "{}://{}:{}{}",
+        url.scheme(),
+        url.domain().expect("Domain is missing"),
+        url.port().unwrap_or(443),
+        url.path()
+    );
+
+    println!("Connecting to endpoint '{:?}' and vhost '{}'", endpoint, args.vhost);
+    let rc = Client::new(
+        &endpoint,
+        url.username(),
+        url.password().expect("Password is missing"),
+    );
 
     let re = Regex::new(&args.filter)?;
 
-    let queues = rc.list_queues()?;
-    for queue in queues {
+    for queue in rc.list_queues()? {
         if args.vhost != queue.vhost || !re.is_match(&queue.name) {
             continue;
         }

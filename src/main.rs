@@ -53,11 +53,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             continue;
         }
 
+        if queue.exclusive {
+            println!("🚫  Skipping exclusive queue {}", queue.name);
+            continue;
+        }
+
         if args.queues {
-            println!("Deleting queue {} - {}", queue.name, queue.message_count);
+            println!("✓ Deleting queue {} - {}", queue.name, queue.message_count);
             rc.delete_queue(&queue.vhost, &queue.name, true)?;
-        } else {
-            println!("Purging {} - {}", queue.name, queue.message_count);
+        } else if queue.message_count > 0 {
+            println!("✓ Purging {} - {}", queue.name, queue.message_count);
             rc.purge_queue(&queue.vhost, &queue.name)?;
         }
     }
@@ -83,7 +88,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             }
 
-            println!("Deleting exchange {}", exchange.name);
+            println!("✓ Deleting exchange {}", exchange.name);
             rc.delete_exchange(&exchange.vhost, &exchange.name, true)?;
         }
     }

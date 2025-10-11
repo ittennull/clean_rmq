@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         url.path()
     );
 
-    println!("Connecting to endpoint {:?} and vhost \"{}\"", endpoint, args.vhost);
+    println!("Connecting to endpoint '{}' and vhost '{}'", endpoint, args.vhost);
     let rc = Client::new(
         &endpoint,
         url.username(),

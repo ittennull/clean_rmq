@@ -3,6 +3,8 @@ use rabbitmq_http_client::blocking_api::Client;
 use regex::Regex;
 use url::Url;
 
+const DRY_RUN_PREFIX: &str = "[DRY RUN] ";
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -25,6 +27,9 @@ struct Args {
 
     #[arg(short, long, default_value_t = false, help = "Delete queues")]
     queues: bool,
+
+    #[arg(short, long, default_value_t = false, help = "Dry run (change nothing)")]
+    dry_run: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -59,11 +64,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         if args.queues {
-            println!("✓ Deleting queue {} - {}", queue.name, queue.message_count);
-            rc.delete_queue(&queue.vhost, &queue.name, true)?;
+            if args.dry_run {
+                println!("{} Deleting queue {} - {}", DRY_RUN_PREFIX, queue.name, queue.message_count);
+            }
+            else{
+                println!("✓ Deleting queue {} - {}", queue.name, queue.message_count);
+                rc.delete_queue(&queue.vhost, &queue.name, true)?;
+            }
         } else if queue.message_count > 0 {
-            println!("✓ Purging {} - {}", queue.name, queue.message_count);
-            rc.purge_queue(&queue.vhost, &queue.name)?;
+            if args.dry_run {
+                println!("{} Purging {} - {}", DRY_RUN_PREFIX, queue.name, queue.message_count);
+            }
+            else{
+                println!("✓ Purging {} - {}", queue.name, queue.message_count);
+                rc.purge_queue(&queue.vhost, &queue.name)?;
+            }
         }
     }
 
@@ -88,8 +103,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             }
 
-            println!("✓ Deleting exchange {}", exchange.name);
-            rc.delete_exchange(&exchange.vhost, &exchange.name, true)?;
+            if args.dry_run {
+                println!("{} Deleting exchange {}", DRY_RUN_PREFIX, exchange.name);
+            }
+            else {
+                println!("✓ Deleting exchange {}", exchange.name);
+                rc.delete_exchange(&exchange.vhost, &exchange.name, true)?;
+            }
         }
     }
 

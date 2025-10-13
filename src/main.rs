@@ -6,7 +6,7 @@ use url::Url;
 const DRY_RUN_PREFIX: &str = "[DRY RUN] ";
 
 #[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[command(version, about = "Purges queues be default. Adding flag -q deletes them instead", long_about = None)]
 struct Args {
     #[arg(
         short,

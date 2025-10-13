@@ -1,7 +1,9 @@
+mod collector;
+
 use clap::Parser;
 use rabbitmq_http_client::blocking_api::Client;
-use regex::Regex;
 use url::Url;
+use crate::collector::collect_objects;
 
 const DRY_RUN_PREFIX: &str = "[DRY RUN] ";
 
@@ -46,70 +48,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Connecting to endpoint '{}' and vhost '{}'", endpoint, args.vhost);
     let rc = Client::new(
-        &endpoint,
+        endpoint.as_str(),
         url.username(),
         url.password().expect("Password is missing"),
     );
 
-    let re = Regex::new(&args.filter)?;
+    let objects= collect_objects(&rc, &args.vhost, &args.filter, args.queues, args.exchanges)?;
 
-    for queue in rc.list_queues()? {
-        if args.vhost != queue.vhost || !re.is_match(&queue.name) {
-            continue;
+    for queue in objects.purge_queues {
+        if args.dry_run {
+            println!("{} Purging {} - {}", DRY_RUN_PREFIX, queue.name, queue.messages);
         }
-
-        if queue.exclusive {
-            println!("🚫  Skipping exclusive queue {}", queue.name);
-            continue;
-        }
-
-        if args.queues {
-            if args.dry_run {
-                println!("{} Deleting queue {} - {}", DRY_RUN_PREFIX, queue.name, queue.message_count);
-            }
-            else{
-                println!("✓ Deleting queue {} - {}", queue.name, queue.message_count);
-                rc.delete_queue(&queue.vhost, &queue.name, true)?;
-            }
-        } else if queue.message_count > 0 {
-            if args.dry_run {
-                println!("{} Purging {} - {}", DRY_RUN_PREFIX, queue.name, queue.message_count);
-            }
-            else{
-                println!("✓ Purging {} - {}", queue.name, queue.message_count);
-                rc.purge_queue(&queue.vhost, &queue.name)?;
-            }
+        else{
+            println!("✓ Purging {} - {}", queue.name, queue.messages);
+            rc.purge_queue(&args.vhost, &queue.name)?;
         }
     }
 
-    if args.exchanges {
-        let skip_exchanges = vec![
-            "",
-            "amq.direct",
-            "amq.fanout",
-            "amq.topic",
-            "amq.headers",
-            "amq.match",
-            "amq.rabbitmq.trace",
-            "(AMQP default)",
-        ];
-
-        let exchanges = rc.list_exchanges()?;
-        for exchange in exchanges {
-            if args.vhost != exchange.vhost
-                || !re.is_match(&exchange.name)
-                || skip_exchanges.contains(&exchange.name.as_str())
-            {
-                continue;
-            }
-
-            if args.dry_run {
-                println!("{} Deleting exchange {}", DRY_RUN_PREFIX, exchange.name);
-            }
-            else {
-                println!("✓ Deleting exchange {}", exchange.name);
-                rc.delete_exchange(&exchange.vhost, &exchange.name, true)?;
-            }
+    for queue in objects.delete_queues {
+        if args.dry_run {
+            println!("{} Deleting queue {} - {}", DRY_RUN_PREFIX, queue.name, queue.messages);
+        }
+        else{
+            println!("✓ Deleting queue {} - {}", queue.name, queue.messages);
+            rc.delete_queue(&args.vhost, &queue.name, true)?;
+        }
+    }
+    
+    for exchange in objects.delete_exchanges {
+        if args.dry_run {
+            println!("{} Deleting exchange {}", DRY_RUN_PREFIX, exchange);
+        }
+        else {
+            println!("✓ Deleting exchange {}", exchange);
+            rc.delete_exchange(&args.vhost, &exchange, true)?;
         }
     }
 

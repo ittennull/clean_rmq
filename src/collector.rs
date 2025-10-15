@@ -1,15 +1,27 @@
 use rabbitmq_http_client::blocking_api::Client;
+use rabbitmq_http_client::responses::QueueInfo;
 use regex::Regex;
 
 pub struct Queue{
     pub name: String,
     pub messages: u64,
+    consumer_count: u16,
 }
 
 pub struct CollectedObjects{
     pub delete_queues: Vec<Queue>,
     pub purge_queues: Vec<Queue>,
     pub delete_exchanges: Vec<String>,
+}
+
+impl Queue {
+    pub fn from(info: QueueInfo) -> Queue {
+        Queue {
+            name: info.name,
+            messages: info.message_count,
+            consumer_count: info.consumer_count,
+        }
+    }
 }
 
 pub fn collect_objects(
@@ -25,8 +37,8 @@ pub fn collect_objects(
 
     let re = Regex::new(filter)?;
 
-    for queue in rc.list_queues()? {
-        if vhost != queue.vhost || !re.is_match(&queue.name) {
+    for queue in rc.list_queues_in(vhost)? {
+        if !re.is_match(&queue.name) {
             continue;
         }
 
@@ -36,15 +48,9 @@ pub fn collect_objects(
         }
 
         if queues {
-            delete_queues.push(Queue {
-                name: queue.name,
-                messages: queue.message_count,
-            });
+            delete_queues.push(Queue::from(queue));
         } else if queue.message_count > 0 {
-            purge_queues.push(Queue {
-                name: queue.name,
-                messages: queue.message_count,
-            });
+            purge_queues.push(Queue::from(queue));
         }
     }
 
@@ -60,11 +66,8 @@ pub fn collect_objects(
             "(AMQP default)",
         ];
 
-        let exchanges = rc.list_exchanges()?;
-        for exchange in exchanges {
-            if vhost != exchange.vhost
-                || !re.is_match(&exchange.name)
-                || skip_exchanges.contains(&exchange.name.as_str())
+        for exchange in rc.list_exchanges_in(vhost)? {
+            if !re.is_match(&exchange.name)|| skip_exchanges.contains(&exchange.name.as_str())
             {
                 continue;
             }

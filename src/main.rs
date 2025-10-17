@@ -1,16 +1,14 @@
 mod collector;
 
 use crate::collector::{
-    CollectedObjects, ExchangeName, Queue, RmqClient, collect_objects, collect_queues,
+    collect_objects, collect_queues, CollectedObjects, ExchangeName, Queue, RmqClient,
 };
 use clap::{Parser, Subcommand};
 use rabbitmq_http_client::blocking_api::Client;
 use url::Url;
 
-const DRY_RUN_PREFIX: &str = "[DRY RUN] ";
-
 #[derive(Parser)]
-#[command(version, about = "Purges queues or deletes queues and exchanges", long_about = None)]
+#[command(version, about = "Cleans RabbitMQ by purging queues or deleting queues and exchanges", long_about = None)]
 struct Args {
     #[arg(
         short,
@@ -31,19 +29,19 @@ struct Args {
     )]
     dry_run: bool,
 
-    #[command(subcommand, help = "Defaults to 'purge' command")]
+    #[command(subcommand)]
     action: Option<Action>,
 }
 
 #[derive(Subcommand)]
 enum Action {
-    #[command(version, about = "Purge queues matching filter", long_about = None)]
+    #[command(version, about = "Purge queues matching filter. This is the default command if nothing is specified", long_about = None)]
     Purge {
         #[arg(short, long, default_value = ".+", help = "Regex filter for names")]
         filter: String,
     },
 
-    #[command(version, about = "Delete queues or exchanges or both matching filter", long_about = None)]
+    #[command(version, about = "Delete queues or exchanges or both", long_about = None)]
     Delete(DeleteOptions),
 }
 
@@ -63,7 +61,7 @@ struct DeleteOptions {
         short = 'f',
         long,
         default_value = ".+",
-        help = "Regex filter for queue names"
+        help = "Regex filter for queue names. Skip queues that don't match this filter. Works only if -q|--queues is also specified"
     )]
     queue_filter: String,
 
@@ -73,7 +71,7 @@ struct DeleteOptions {
     #[arg(
         long,
         default_value_t = false,
-        help = "Delete exchanges without destination or if all of the destination's exchanges don't end up in a queue. If an exchange is bound to a queue that is also deleted in this operation (using flags -q|--queues), this exchange will be deleted too"
+        help = "Delete exchanges without destination or if all of the destination's exchanges don't end up in a queue. If an exchange is bound to a queue that is also deleted in this operation (using flag -q|--queues), this exchange will be deleted too unless it's also bound to any queue that survives"
     )]
     exchanges_without_destination: bool,
 }
@@ -138,16 +136,21 @@ fn purge(
             continue;
         }
 
-        if dry_run {
-            println!(
-                "{} Purging {} - {}",
-                DRY_RUN_PREFIX, queue.name, queue.messages
-            );
-        } else {
-            println!("✓ Purging {} - {}", queue.name, queue.messages);
+        print_line(
+            dry_run,
+            &format!("Purging queue {} - {}", queue.name, queue.messages),
+        );
+        if !dry_run {
             rc.purge_queue(vhost, &queue.name)?;
         }
     }
+
+    let num_exclusive = queues.iter().filter(|q| q.exclusive).count();
+    println!(
+        "Purged {} queues, skipped {} exclusive queues",
+        queues.len() - num_exclusive,
+        num_exclusive
+    );
 
     Ok(())
 }
@@ -165,25 +168,34 @@ fn delete(
             continue;
         }
 
-        if dry_run {
-            println!(
-                "{} Deleting queue {} - {}",
-                DRY_RUN_PREFIX, queue.name, queue.messages
-            );
-        } else {
-            println!("✓ Deleting queue {} - {}", queue.name, queue.messages);
+        print_line(
+            dry_run,
+            &format!("Deleting queue {} - {}", queue.name, queue.messages),
+        );
+        if !dry_run {
             rc.delete_queue(vhost, &queue.name, true)?;
         }
     }
 
     for exchange in exchanges {
-        if dry_run {
-            println!("{} Deleting exchange {}", DRY_RUN_PREFIX, exchange);
-        } else {
-            println!("✓ Deleting exchange {}", exchange);
+        print_line(dry_run, &format!("Deleting exchange {}", exchange));
+        if !dry_run {
             rc.delete_exchange(vhost, &exchange, true)?;
         }
     }
 
+    let num_exclusive = queues.iter().filter(|q| q.exclusive).count();
+    println!(
+        "Deleted {} queues, {} exchanges, skipped {} exclusive queues",
+        queues.len() - num_exclusive,
+        exchanges.len(),
+        num_exclusive
+    );
+
     Ok(())
+}
+
+fn print_line(dry_run: bool, message: &str) {
+    let prefix = if dry_run { "[DRY RUN]" } else { "✓ " };
+    println!("{}{}", prefix, message);
 }

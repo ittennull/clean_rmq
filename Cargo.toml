@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-rabbitmq_http_client = "0.60"
-clap = { version = "4.5.48", features = ["derive"] }
-regex = "1.11.3"
-url = " 2.4.4"
+rabbitmq_http_client = "0.65"
+clap = { version = "4.5", features = ["derive"] }
+regex = "1.12"
+url = " 2.5"

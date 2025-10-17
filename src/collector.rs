@@ -126,6 +126,7 @@ fn filter_exchanges_without_destination(
     all_exchanges: Vec<ExchangeName>,
     queues: Vec<QueueName>,
 ) -> Result<Vec<ExchangeName>, Box<dyn std::error::Error>> {
+    // build a hashmap from binding destination to all sources
     let bindings: HashMap<(String, BindingDestinationType), Vec<String>> = rc
         .list_bindings_in(vhost)?
         .into_iter()
@@ -136,34 +137,39 @@ fn filter_exchanges_without_destination(
             acc
         });
 
-    let mut survived_exchanges: HashSet<String> = HashSet::new();
+    let mut survived_exchanges: Vec<HashSet<String>> = vec![HashSet::new()];
 
     // All exchanges connected to queues are survived
     for queue in queues {
         if let Some(source_exchanges) = bindings.get(&(queue, BindingDestinationType::Queue)) {
-            survived_exchanges.extend(source_exchanges.clone());
+            survived_exchanges[0].extend(source_exchanges.clone());
         }
     }
 
     // All other exchanges connected to survived exchanges are also survived
-    let mut last_survived = survived_exchanges.clone();
     loop {
-        let mut more_survived_exchanges = HashSet::new();
-        for survived in last_survived {
+        let mut more_survived_exchanges: HashSet<String> = HashSet::new();
+        for survived in survived_exchanges.last().unwrap() {
             if let Some(source_exchanges) =
-                bindings.get(&(survived, BindingDestinationType::Exchange))
+                bindings.get(&(survived.clone(), BindingDestinationType::Exchange))
             {
                 more_survived_exchanges.extend(source_exchanges.clone());
             }
         }
-        if more_survived_exchanges.is_empty(){
+        if more_survived_exchanges.is_empty() {
             break;
         }
 
-        survived_exchanges.extend(more_survived_exchanges.clone());
-        last_survived = more_survived_exchanges;
+        survived_exchanges.push(more_survived_exchanges);
     }
 
     let all_exchanges: HashSet<_> = all_exchanges.into_iter().collect();
-    Ok(all_exchanges.difference(&survived_exchanges).into_iter().cloned().collect())
+    let all_survived_exchanges: HashSet<_> = survived_exchanges.into_iter().flatten().collect();
+    let mut exchanges_to_delete: Vec<_> = all_exchanges
+        .difference(&all_survived_exchanges)
+        .cloned()
+        .collect();
+    exchanges_to_delete.sort();
+
+    Ok(exchanges_to_delete)
 }

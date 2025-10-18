@@ -8,7 +8,39 @@ use rabbitmq_http_client::blocking_api::Client;
 use url::Url;
 
 #[derive(Parser)]
-#[command(version, about = "Cleans RabbitMQ by purging queues or deleting queues and exchanges", long_about = None)]
+#[command(version, about = color_print::cstr!(r#"Cleans RabbitMQ by purging queues or deleting queues and exchanges.
+See examples below. Get help on each command like this <green><i>clean_rmq help delete</></>"#),
+    long_about = None, after_long_help = color_print::cstr!(r#"
+<bold>Examples</>:
+- Purge all queues on localhost RabbitMQ server
+  <green><i>clean_rmq</></>
+  or
+  <green><i>clean_rmq purge</></>
+
+- Any operation in dry run mode changes nothing, it only prints out the intendied actions. Short flag is '-d' or long flag is '--dry-run'
+  <green><i>clean_rmq --dry-run purge</></>
+
+- Purge queues with names ending with "_error"
+  <green><i>clean_rmq purge -f '.*_error'</></>
+
+- Connect to a remote RabbitMQ server and vhost 'myapp' and purge queues with names starting with "temp_"
+  <green><i>clean_rmq -u 'http://user:password@remotehost:15672/api' --vhost myapp purge -f '^temp_.*'</></>
+
+- Delete all queues and exchanges to get a clean state as if you have just started RabbitMQ up. Exclusive queues are never deleted.
+  <green><i>clean_rmq delete -q -e</></>
+  or you can combine short flags
+  <green><i>clean_rmq delete -qe</></>
+
+- Delete only queues without consumers that match the name filter 'process-.*'
+  <green><i>clean_rmq delete -q --queues-without-consumers -f 'process-.*'</></>
+  
+- Delete all exchanges that are not directly on indirectly bound to any queue. A message published to such an exchange would be lost.
+  <green><i>clean_rmq delete -e --exchanges-without-destination</></>
+  
+- Same as above. Also delete queues without consumers that match the name filter 'process-.*'.
+  If an exchange is bound directly or indirectly to a non-exclusive queue matching the filter, e.g. 'process-123', it will be deleted too because this operation deletes this queue and the exchange becomes unbound
+  <green><i>clean_rmq delete -e --exchanges-without-destination -q --queues-without-consumers -f 'process-.*'</></>
+"#))]
 struct Args {
     #[arg(
         short,

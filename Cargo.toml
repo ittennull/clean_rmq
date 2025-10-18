@@ -8,3 +8,4 @@ rabbitmq_http_client = "0.65"
 clap = { version = "4.5", features = ["derive"] }
 regex = "1.12"
 url = " 2.5"
+color-print="0.3"

@@ -37,16 +37,13 @@ pub fn collect_queues(
     vhost: &str,
     filter: &str,
 ) -> Result<Vec<Queue>, Box<dyn std::error::Error>> {
-    let mut queues = Vec::new();
     let re = Regex::new(filter)?;
-
-    for queue in rc.list_queues_in(vhost)? {
-        if queue.message_count == 0 || !re.is_match(&queue.name) {
-            continue;
-        }
-
-        queues.push(Queue::from(queue));
-    }
+    let queues = rc
+        .list_queues_in(vhost)?
+        .into_iter()
+        .filter(|queue| queue.message_count > 0 && re.is_match(&queue.name))
+        .map(Queue::from)
+        .collect();
 
     Ok(queues)
 }
@@ -60,19 +57,19 @@ pub fn collect_objects(
     exchanges: bool,
     exchanges_without_destination: bool,
 ) -> Result<CollectedObjects, Box<dyn std::error::Error>> {
-    let all_queues = rc
+    let all_queues: Vec<_> = rc
         .list_queues_in(vhost)?
         .into_iter()
         .map(Queue::from)
-        .collect::<Vec<Queue>>();
+        .collect();
 
     let queues_to_delete = if queues {
         let re = Regex::new(queue_filter)?;
-        let mut queues = all_queues
+        let mut queues: Vec<_> = all_queues
             .iter()
             .filter(|x| re.is_match(&x.name))
             .cloned()
-            .collect::<Vec<Queue>>();
+            .collect();
         if queues_without_consumers {
             queues.retain(|x| x.consumer_count == 0);
         }
@@ -98,14 +95,14 @@ pub fn collect_objects(
             .into_iter()
             .filter(|x| !skip_exchanges.contains(&x.name.as_str()))
             .map(|x| x.name)
-            .collect::<Vec<_>>();
+            .collect();
 
         if exchanges_without_destination {
             let surviving_queues = all_queues
                 .into_iter()
                 .filter(|x| x.exclusive || !queues_to_delete.iter().any(|dq| dq.name == x.name))
                 .map(|x| x.name)
-                .collect::<Vec<QueueName>>();
+                .collect();
             filter_exchanges_without_destination(rc, vhost, exchanges, surviving_queues)?
         } else {
             exchanges

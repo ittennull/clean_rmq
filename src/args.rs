@@ -1,8 +1,8 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(version, about = color_print::cstr!(r#"Cleans RabbitMQ by purging queues or deleting queues and exchanges.
-See examples below. Get help on each command like this <green><i>clean_rmq help delete</></>"#),
+#[command(version, about = r#"Cleans RabbitMQ by purging queues or deleting queues and exchanges.
+See examples below"#,
     long_about = None, after_long_help = color_print::cstr!(r#"
 <bold>Examples</>:
 - Purge all queues on localhost RabbitMQ server

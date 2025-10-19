@@ -126,6 +126,6 @@ fn delete(
 }
 
 fn print_line(dry_run: bool, message: &str) {
-    let prefix = if dry_run { "[DRY RUN]" } else { "✓ " };
+    let prefix = if dry_run { "[DRY RUN] " } else { "✓ " };
     println!("{}{}", prefix, message);
 }

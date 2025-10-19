@@ -4,8 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-rabbitmq_http_client = "0.65"
+rabbitmq_http_client = "0.66"
 clap = { version = "4.5", features = ["derive"] }
 regex = "1.12"
 url = " 2.5"
 color-print="0.3"
+
+[dev-dependencies]
+rand = "0.9"

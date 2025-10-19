@@ -210,6 +210,7 @@ dependencies = [
  "clap",
  "color-print",
  "rabbitmq_http_client",
+ "rand",
  "regex",
  "url",
 ]
@@ -997,9 +998,9 @@ checksum = "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f"
 
 [[package]]
 name = "rabbitmq_http_client"
-version = "0.65.0"
+version = "0.66.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17f03705ab15935d1ca97605ecdfbb4fed6938df94e64dafcb08e741265308d1"
+checksum = "0f429603d727775bf2761cfc7f2f75d9cfb1ad99ff059e4458f95040ce9ed7b7"
 dependencies = [
  "backtrace",
  "log",
@@ -1351,9 +1352,9 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "syn"
-version = "2.0.106"
+version = "2.0.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ede7c438028d4436d71104916910f5bb611972c5cfd7f89b8300a8186e6fada6"
+checksum = "2a26dbd934e5451d21ef060c018dae56fc073894c5a7896f882928a76e6d081b"
 dependencies = [
  "proc-macro2",
  "quote",

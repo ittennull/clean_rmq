@@ -1,0 +1,88 @@
+name: Build and release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "master" ]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_release:
+
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      matrix:
+        job:
+        - os: ubuntu-latest
+          target: x86_64-unknown-linux-gnu
+        - os: macos-latest
+          target: aarch64-apple-darwin
+        - os: windows-latest
+          target: x86_64-pc-windows-gnu
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: "Caching cargo & rustup"
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          ~/.rustup
+          target
+        key: ${{ runner.os }}
+
+    - name: install target
+      run: |
+        rustup target add ${{ matrix.job.target }}
+        rustup show
+
+    - name: Start RabbitMQ
+      run: |
+        docker run -d --name some-rabbit -p 15672:15672 rabbitmq:4-management
+        # wait till RMQ is up
+        until curl -sL -u guest:guest -H "Accept: application/json" http://localhost:15672/api/overview >/dev/null; do sleep 1; done
+
+    - name: Run tests
+      run: cargo test
+
+    - name: Build
+      run: cargo build --release --verbose --target=${{ matrix.job.target }}
+
+    - name: Set binary name & path
+      id: bin
+      shell: bash
+      run: |
+        # Figure out suffix of binary
+        EXE_suffix=""
+        case ${{ matrix.job.target }} in
+          *-pc-windows-*) EXE_suffix=".exe" ;;
+        esac;
+        
+        APP_NAME="clean_rmq"
+        
+        # Setup paths
+        mkdir -p out
+        BIN_PATH="target/${{ matrix.job.target }}/release/${APP_NAME}${EXE_suffix}"
+        ARTIFACT_PATH="${{ github.workspace }}/out/${APP_NAME}-${{github.ref_name}}-${{ matrix.job.target }}${EXE_suffix}"
+        
+        cp $BIN_PATH $ARTIFACT_PATH
+
+        # Let subsequent steps know where to find the binary
+        echo "ARTIFACT_PATH=${ARTIFACT_PATH}" >> $GITHUB_OUTPUT
+
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      if: github.ref_type == 'tag'
+      with:
+        files: ${{ steps.bin.outputs.ARTIFACT_PATH }}
+        fail_on_unmatched_files: true
+        generate_release_notes: true

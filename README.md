@@ -1,9 +1,9 @@
 Small tool to quickly purge all messages in RabbitMQ. It can also delete the queues and exchanges if corresponding options are passed to it.
 
 See output of `clean_rmq help` for more details and examples:
-```bash
+```
 Cleans RabbitMQ by purging queues or deleting queues and exchanges.
-See examples below. Get help on each command like this clean_rmq help delete
+See examples below.
 
 Usage: clean_rmq [OPTIONS] [COMMAND]
 
@@ -65,7 +65,7 @@ Examples:
 ```
 
 And here is output of `clean_rmq help delete` for more details on the delete command:
-```bash
+```
 Delete queues or exchanges or both
 
 Usage: clean_rmq delete [OPTIONS]

@@ -65,15 +65,13 @@ pub fn collect_objects(
 
     let queues_to_delete = if queues {
         let re = Regex::new(queue_filter)?;
-        let mut queues: Vec<_> = all_queues
+        all_queues
             .iter()
-            .filter(|x| re.is_match(&x.name))
+            .filter(|x| {
+                re.is_match(&x.name) && (!queues_without_consumers || x.consumer_count == 0)
+            })
             .cloned()
-            .collect();
-        if queues_without_consumers {
-            queues.retain(|x| x.consumer_count == 0);
-        }
-        queues
+            .collect()
     } else {
         vec![]
     };

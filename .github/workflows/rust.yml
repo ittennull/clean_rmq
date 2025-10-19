@@ -46,7 +46,7 @@ jobs:
         rustup show
 
     - name: Run tests
-      if: runner.os == 'Ubuntu'
+      if: runner.os == 'Linux'
       run: |
         docker run -d --name some-rabbit -p 15672:15672 rabbitmq:4-management
         # wait till RMQ is up

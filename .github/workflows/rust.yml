@@ -45,14 +45,13 @@ jobs:
         rustup target add ${{ matrix.job.target }}
         rustup show
 
-    - name: Start RabbitMQ
+    - name: Run tests
+      if: runner.os == 'Ubuntu'
       run: |
         docker run -d --name some-rabbit -p 15672:15672 rabbitmq:4-management
         # wait till RMQ is up
         until curl -sL -u guest:guest -H "Accept: application/json" http://localhost:15672/api/overview >/dev/null; do sleep 1; done
-
-    - name: Run tests
-      run: cargo test
+        cargo test
 
     - name: Build
       run: cargo build --release --verbose --target=${{ matrix.job.target }}

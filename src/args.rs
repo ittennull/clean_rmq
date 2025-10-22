@@ -93,6 +93,12 @@ pub struct DeleteOptions {
     )]
     pub queue_filter: String,
 
+    #[arg(
+        long,
+        help = "Regex filter that matches queue names to be excluded from deletion. The flag can be specified multiple times"
+    )]
+    pub exclude_queue_filter: Vec<String>,
+
     #[arg(short, long, default_value_t = false, help = "Delete exchanges")]
     pub exchanges: bool,
 

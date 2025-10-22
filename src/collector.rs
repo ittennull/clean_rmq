@@ -1,3 +1,4 @@
+use crate::DeleteOptions;
 use rabbitmq_http_client::blocking_api::Client;
 use rabbitmq_http_client::commons::BindingDestinationType;
 use rabbitmq_http_client::responses::QueueInfo;
@@ -39,10 +40,7 @@ pub fn collect_queues(
     exclude_queue_filters: &Vec<String>,
 ) -> Result<Vec<Queue>, Box<dyn std::error::Error>> {
     let include_filter = Regex::new(filter)?;
-    let exclude_filters = exclude_queue_filters
-        .iter()
-        .map(|f| Regex::new(f))
-        .collect::<Result<Vec<_>, _>>()?;
+    let exclude_filters = get_regex_vec(&exclude_queue_filters)?;
 
     let queues = rc
         .list_queues_in(vhost)?
@@ -61,11 +59,7 @@ pub fn collect_queues(
 pub fn collect_objects(
     rc: &RmqClient,
     vhost: &str,
-    queues: bool,
-    queues_without_consumers: bool,
-    queue_filter: &str,
-    exchanges: bool,
-    exchanges_without_destination: bool,
+    options: &DeleteOptions,
 ) -> Result<CollectedObjects, Box<dyn std::error::Error>> {
     let all_queues: Vec<_> = rc
         .list_queues_in(vhost)?
@@ -73,12 +67,15 @@ pub fn collect_objects(
         .map(Queue::from)
         .collect();
 
-    let queues_to_delete = if queues {
-        let re = Regex::new(queue_filter)?;
+    let queues_to_delete = if options.queues {
+        let include_filter = Regex::new(&options.queue_filter)?;
+        let exclude_filters = get_regex_vec(&options.exclude_queue_filter)?;
         all_queues
             .iter()
-            .filter(|x| {
-                re.is_match(&x.name) && (!queues_without_consumers || x.consumer_count == 0)
+            .filter(|queue| {
+                include_filter.is_match(&queue.name)
+                    && exclude_filters.iter().all(|f| !f.is_match(&queue.name))
+                    && (!options.queues_without_consumers || queue.consumer_count == 0)
             })
             .cloned()
             .collect()
@@ -86,7 +83,7 @@ pub fn collect_objects(
         vec![]
     };
 
-    let delete_exchanges = if exchanges {
+    let delete_exchanges = if options.exchanges {
         let skip_exchanges = vec![
             "",
             "amq.direct",
@@ -105,7 +102,7 @@ pub fn collect_objects(
             .map(|x| x.name)
             .collect();
 
-        if exchanges_without_destination {
+        if options.exchanges_without_destination {
             let surviving_queues = all_queues
                 .into_iter()
                 .filter(|x| x.exclusive || !queues_to_delete.iter().any(|dq| dq.name == x.name))
@@ -177,4 +174,12 @@ fn filter_exchanges_without_destination(
     exchanges_to_delete.sort();
 
     Ok(exchanges_to_delete)
+}
+
+fn get_regex_vec(filters: &Vec<String>) -> Result<Vec<Regex>, Box<dyn std::error::Error>> {
+    let regex_vec = filters
+        .iter()
+        .map(|f| Regex::new(f))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(regex_vec)
 }

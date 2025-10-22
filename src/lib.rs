@@ -1,7 +1,7 @@
 mod args;
 mod collector;
 
-pub use crate::args::{Args, Action, DeleteOptions};
+pub use crate::args::{Action, Args, DeleteOptions};
 use crate::collector::{
     collect_objects, collect_queues, CollectedObjects, ExchangeName, Queue, RmqClient,
 };
@@ -34,20 +34,16 @@ pub fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     });
 
     match action {
-        Action::Purge { queue_filter: filter, exclude_queue_filter } => {
+        Action::Purge {
+            queue_filter: filter,
+            exclude_queue_filter,
+        } => {
             let queues = collect_queues(&rc, &args.vhost, &filter, &exclude_queue_filter)?;
             purge(&rc, &args.vhost, args.dry_run, &queues)?;
         }
         Action::Delete(options) => {
-            let CollectedObjects { queues, exchanges } = collect_objects(
-                &rc,
-                &args.vhost,
-                options.queues,
-                options.queues_without_consumers,
-                &options.queue_filter,
-                options.exchanges,
-                options.exchanges_without_destination,
-            )?;
+            let CollectedObjects { queues, exchanges } =
+                collect_objects(&rc, &args.vhost, &options)?;
             delete(&rc, &args.vhost, args.dry_run, &queues, &exchanges)?;
         }
     }

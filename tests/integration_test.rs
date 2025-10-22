@@ -331,19 +331,22 @@ fn delete_queues_with_filter() -> TestingResult {
     client.create_queue("one")?;
     client.create_exchange("two")?;
     client.create_connected_queue("two", "two")?;
+    client.create_queue("hello")?;
 
     let args = Args {
         action: delete_action(|options| {
             options.queues = true;
             options.queue_filter = ".o".to_string(); // ends with 'o'
+            options.exclude_queue_filter = vec!["hell.*".to_string()]; // does not start with 't'
         }),
         ..create_args(&client, false)
     };
     clean_rmq::run(args)?;
 
     let queues = client.list_queues()?;
-    assert!(queues.contains(&"one".to_string()));
-    assert!(!queues.contains(&"two".to_string()));
+    assert!(queues.contains(&"one".to_string())); // does not hit include filter, so it is not deleted
+    assert!(!queues.contains(&"two".to_string())); // hits include filter, so it is deleted
+    assert!(queues.contains(&"hello".to_string())); // hits exclude filter, so it is not deleted
 
     Ok(())
 }
@@ -353,6 +356,7 @@ fn delete_action(f: fn(&mut DeleteOptions)) -> Option<Action> {
         queues: false,
         queues_without_consumers: false,
         queue_filter: "".to_string(),
+        exclude_queue_filter: vec![],
         exchanges: false,
         exchanges_without_destination: false,
     };

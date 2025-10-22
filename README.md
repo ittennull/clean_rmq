@@ -46,6 +46,9 @@ Examples:
 
 - Purge queues with names ending with "_error"
   clean_rmq purge -f '.*_error'
+  
+- Purge queues with names ending with "_error" but not starting with "critical_" or "important_"
+  clean_rmq purge -f '.*_error' --exclude-queue-filter 'critical_.*' --exclude-queue-filter 'important_.*'
 
 - Connect to a remote RabbitMQ server and vhost 'myapp' and purge queues with names starting with "temp_"
   clean_rmq -u 'http://user:password@remotehost:15672/api' --vhost myapp purge -f '^temp_.*'

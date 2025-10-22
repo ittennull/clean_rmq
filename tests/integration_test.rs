@@ -49,7 +49,8 @@ fn purge_in_dry_run_mode_doesnt_change_anything() -> TestingResult {
 
     let args = Args {
         action: Some(Action::Purge {
-            filter: ".+".to_string(),
+            queue_filter: ".+".to_string(),
+            exclude_queue_filter: vec![],
         }),
         ..create_args(&client, true)
     };
@@ -69,25 +70,31 @@ fn purge_in_dry_run_mode_doesnt_change_anything() -> TestingResult {
 #[test]
 fn purge_with_filter() -> TestingResult {
     let client = TestClient::new()?;
-    client.create_exchange("e1")?;
-    client.create_connected_queue("queue1", "e1")?;
-    client.publish_message_and_wait_delivery_in("e1", "queue1")?;
 
-    client.create_exchange("e2")?;
-    client.create_connected_queue("queue_error", "e2")?;
-    client.publish_message_and_wait_delivery_in("e2", "queue_error")?;
+    let setup = |exchange: &str, queue: &str| -> TestingResult {
+        client.create_exchange(exchange)?;
+        client.create_connected_queue(queue, exchange)?;
+        client.publish_message_and_wait_delivery_in(exchange, queue)?;
+        Ok(())
+    };
+
+    setup("e1", "queue1")?;
+    setup("e2", "queue_error")?;
+    setup("e3", "queue_special_error")?;
 
     let args = Args {
         action: Some(Action::Purge {
-            filter: ".+_error".to_string(),
+            queue_filter: ".+_error".to_string(),
+            exclude_queue_filter: vec![".*special.*".to_string()],
         }),
         ..create_args(&client, false)
     };
     clean_rmq::run(args)?;
 
     wait_for_0_messages(&client, "queue_error")?;
-    assert_eq!(0, client.get_number_of_messages("queue_error")?);
-    assert_eq!(1, client.get_number_of_messages("queue1")?);
+    assert_eq!(0, client.get_number_of_messages("queue_error")?); // hits include filter, so it is purged
+    assert_eq!(1, client.get_number_of_messages("queue1")?); // does not hit include filter, so it is not purged
+    assert_eq!(1, client.get_number_of_messages("queue_special_error")?); // hits include and exclude filter, so it is not purged
 
     Ok(())
 }

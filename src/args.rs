@@ -60,10 +60,13 @@ pub struct Args {
 
 #[derive(Subcommand)]
 pub enum Action {
-    #[command(version, about = "Purge queues matching filter. This is the default command if nothing is specified", long_about = None)]
+    #[command(version, about = "Purge queues matching filter. This is the default command if nothing is specified. The command first collects all the queues that match the filter and then removes the queues that match any of the exclude filters", long_about = None)]
     Purge {
-        #[arg(short, long, default_value = ".+", help = "Regex filter for names")]
-        filter: String,
+        #[arg(short = 'f', long, default_value = ".+", help = "Regex filter for names")]
+        queue_filter: String,
+
+        #[arg(long, help = "Regex filter that matches queue names to be excluded from purging. The flag can be specified multiple times")]
+        exclude_queue_filter: Vec<String>,
     },
 
     #[command(version, about = "Delete queues or exchanges or both", long_about = None)]

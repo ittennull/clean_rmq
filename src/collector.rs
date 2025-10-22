@@ -36,12 +36,22 @@ pub fn collect_queues(
     rc: &RmqClient,
     vhost: &str,
     filter: &str,
+    exclude_queue_filters: &Vec<String>,
 ) -> Result<Vec<Queue>, Box<dyn std::error::Error>> {
-    let re = Regex::new(filter)?;
+    let include_filter = Regex::new(filter)?;
+    let exclude_filters = exclude_queue_filters
+        .iter()
+        .map(|f| Regex::new(f))
+        .collect::<Result<Vec<_>, _>>()?;
+
     let queues = rc
         .list_queues_in(vhost)?
         .into_iter()
-        .filter(|queue| queue.message_count > 0 && re.is_match(&queue.name))
+        .filter(|queue| {
+            queue.message_count > 0
+                && include_filter.is_match(&queue.name)
+                && exclude_filters.iter().all(|f| !f.is_match(&queue.name))
+        })
         .map(Queue::from)
         .collect();
 

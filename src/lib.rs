@@ -29,12 +29,13 @@ pub fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let action = args.action.unwrap_or_else(|| Action::Purge {
-        filter: ".+".to_string(),
+        queue_filter: ".+".to_string(),
+        exclude_queue_filter: vec![],
     });
 
     match action {
-        Action::Purge { filter } => {
-            let queues = collect_queues(&rc, &args.vhost, &filter)?;
+        Action::Purge { queue_filter: filter, exclude_queue_filter } => {
+            let queues = collect_queues(&rc, &args.vhost, &filter, &exclude_queue_filter)?;
             purge(&rc, &args.vhost, args.dry_run, &queues)?;
         }
         Action::Delete(options) => {

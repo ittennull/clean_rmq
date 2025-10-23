@@ -10,7 +10,8 @@ See examples below
 Usage: clean_rmq [OPTIONS] [COMMAND]
 
 Commands:
-  purge   Purge queues matching filter. This is the default command if nothing is specified. The command first collects all the queues that match the filter and then removes the queues that match any of the exclude filters
+  purge   Purge queues matching filter. This is the default command if nothing is specified.
+          The command first collects all the queues that match the filter and then excludes the queues that match any of the exclude filters
   delete  Delete queues or exchanges or both
   help    Print this message or the help of the given subcommand(s)
 
@@ -46,7 +47,7 @@ Examples:
 
 - Purge queues with names ending with "_error"
   clean_rmq purge -f '.*_error'
-  
+
 - Purge queues with names ending with "_error" but not starting with "critical_" or "important_"
   clean_rmq purge -f '.*_error' --exclude-queue-filter 'critical_.*' --exclude-queue-filter 'important_.*'
 
@@ -65,14 +66,16 @@ Examples:
   clean_rmq delete -e --exchanges-without-destination
 
 - Same as above. Also delete queues without consumers that match the name filter 'process-.*'.
-  If an exchange is bound directly or indirectly to a non-exclusive queue matching the filter, e.g. 'process-123', it will be deleted too because this operation deletes this queue and the exchange becomes unbound
+  If an exchange is bound directly or indirectly to a non-exclusive queue matching the filter, e.g. 'process-123',
+  it will be deleted too because this operation deletes this queue and the exchange becomes unbound
   clean_rmq delete -e --exchanges-without-destination -q --queues-without-consumers -f 'process-.*'
 ```
 
 ## Purge queues
 `clean_rmq help purge`:
 ```
-Purge queues matching filter. This is the default command if nothing is specified. The command first collects all the queues that match the filter and then removes the queues that match any of the exclude filters
+Purge queues matching filter. This is the default command if nothing is specified.
+The command first collects all the queues that match the filter and then excludes the queues that match any of the exclude filters
 
 Usage: clean_rmq purge [OPTIONS]
 
@@ -106,12 +109,12 @@ Options:
   -e, --exchanges
           Delete exchanges
       --exchanges-without-destination
-          Delete exchanges without destination or if all of the destination's exchanges don't end up in a queue. If an exchange is bound to a queue that is also deleted in this operation (using flag -q|--queues), this exchange will be deleted too unless it's also bound to any queue that survives
+          Delete exchanges without destination or if all of the destination's exchanges don't end up in a queue.
+          If an exchange is bound to a queue that is also deleted in this operation (using flag -q|--queues), this exchange will be deleted too unless it's also bound to any queue that survives
   -h, --help
           Print help
   -V, --version
           Print version
-
 ```
 
 ## Motivation
@@ -121,6 +124,7 @@ There are 2 main use cases for this tool:
 
 ## Installation
 1. Download a binary for your operating system from the releases page
-2. Rename it to `clean_rmq` (optional, short name is easier to type)
-3. Make the binary executable: `chmod +x clean_rmq`
+2. Rename it to `clean_rmq`. It's not necessary, but short name is easier to type
+3. Make the binary executable (Linux, macOS): `chmod +x clean_rmq`
 4. (Optional) Move the binary to a directory in your PATH
+5. (Optional) On macOS you may need to run `xattr -dr com.apple.quarantine clean_rmq` to be able to run the binary

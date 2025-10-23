@@ -12,9 +12,33 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build_and_release:
+  test:
+    runs-on: ubuntu-latest
 
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: "Caching cargo & rustup"
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          ~/.rustup
+          target
+        key: ${{ runner.os }}
+
+    - name: Run tests
+      run: |
+        docker run -d --name some-rabbit -p 15672:15672 rabbitmq:4-management
+        # wait till RMQ is up
+        until curl -sL -u guest:guest -H "Accept: application/json" http://localhost:15672/api/overview >/dev/null; do sleep 1; done
+        cargo test
+        
+
+  build_and_release:
     runs-on: ${{ matrix.job.os }}
+    needs: test
     strategy:
       matrix:
         job:
@@ -44,14 +68,6 @@ jobs:
       run: |
         rustup target add ${{ matrix.job.target }}
         rustup show
-
-    - name: Run tests
-      if: runner.os == 'Linux'
-      run: |
-        docker run -d --name some-rabbit -p 15672:15672 rabbitmq:4-management
-        # wait till RMQ is up
-        until curl -sL -u guest:guest -H "Accept: application/json" http://localhost:15672/api/overview >/dev/null; do sleep 1; done
-        cargo test
 
     - name: Build
       run: cargo build --release --verbose --target=${{ matrix.job.target }}

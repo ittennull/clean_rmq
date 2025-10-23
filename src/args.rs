@@ -15,7 +15,7 @@ See examples below"#,
 
 - Purge queues with names ending with "_error"
   <green><i>clean_rmq purge -f '.*_error'</></>
-  
+
 - Purge queues with names ending with "_error" but not starting with "critical_" or "important_"
   <green><i>clean_rmq purge -f '.*_error' --exclude-queue-filter 'critical_.*' --exclude-queue-filter 'important_.*'</></>
 
@@ -34,7 +34,8 @@ See examples below"#,
   <green><i>clean_rmq delete -e --exchanges-without-destination</></>
 
 - Same as above. Also delete queues without consumers that match the name filter 'process-.*'.
-  If an exchange is bound directly or indirectly to a non-exclusive queue matching the filter, e.g. 'process-123', it will be deleted too because this operation deletes this queue and the exchange becomes unbound
+  If an exchange is bound directly or indirectly to a non-exclusive queue matching the filter, e.g. 'process-123',
+  it will be deleted too because this operation deletes this queue and the exchange becomes unbound
   <green><i>clean_rmq delete -e --exchanges-without-destination -q --queues-without-consumers -f 'process-.*'</></>
 "#))]
 pub struct Args {
@@ -63,7 +64,8 @@ pub struct Args {
 
 #[derive(Subcommand)]
 pub enum Action {
-    #[command(version, about = "Purge queues matching filter. This is the default command if nothing is specified. The command first collects all the queues that match the filter and then removes the queues that match any of the exclude filters", long_about = None)]
+    #[command(version, about = r#"Purge queues matching filter. This is the default command if nothing is specified.
+The command first collects all the queues that match the filter and then excludes the queues that match any of the exclude filters"#, long_about = None)]
     Purge {
         #[arg(short = 'f', long, default_value = ".+", help = "Regex filter for names")]
         queue_filter: String,
@@ -108,7 +110,8 @@ pub struct DeleteOptions {
     #[arg(
         long,
         default_value_t = false,
-        help = "Delete exchanges without destination or if all of the destination's exchanges don't end up in a queue. If an exchange is bound to a queue that is also deleted in this operation (using flag -q|--queues), this exchange will be deleted too unless it's also bound to any queue that survives"
+        help = r#"Delete exchanges without destination or if all of the destination's exchanges don't end up in a queue.
+If an exchange is bound to a queue that is also deleted in this operation (using flag -q|--queues), this exchange will be deleted too unless it's also bound to any queue that survives"#
     )]
     pub exchanges_without_destination: bool,
 }

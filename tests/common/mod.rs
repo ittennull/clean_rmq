@@ -5,7 +5,7 @@ use rabbitmq_http_client::requests::{
     ExchangeParams, MessageProperties, QueueParams, VirtualHostParams,
 };
 use rand::distr::Alphanumeric;
-use rand::Rng;
+use rand::RngExt;
 use std::error::Error;
 use std::time::Duration;
 

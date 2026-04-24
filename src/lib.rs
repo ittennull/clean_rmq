@@ -107,7 +107,7 @@ fn delete(
     for exchange in exchanges {
         print_line(dry_run, &format!("Deleting exchange {}", exchange));
         if !dry_run {
-            rc.delete_exchange(vhost, &exchange, true)?;
+            rc.delete_exchange(vhost, exchange, true)?;
         }
     }
 

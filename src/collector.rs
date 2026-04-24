@@ -37,10 +37,10 @@ pub fn collect_queues(
     rc: &RmqClient,
     vhost: &str,
     filter: &str,
-    exclude_queue_filters: &Vec<String>,
+    exclude_queue_filters: &[String],
 ) -> Result<Vec<Queue>, Box<dyn std::error::Error>> {
     let include_filter = Regex::new(filter)?;
-    let exclude_filters = get_regex_vec(&exclude_queue_filters)?;
+    let exclude_filters = get_regex_vec(exclude_queue_filters)?;
 
     let queues = rc
         .list_queues_in(vhost)?
@@ -92,6 +92,7 @@ pub fn collect_objects(
             "amq.headers",
             "amq.match",
             "amq.rabbitmq.trace",
+            "amq.rabbitmq.log",
             "(AMQP default)",
         ];
 
@@ -176,7 +177,7 @@ fn filter_exchanges_without_destination(
     Ok(exchanges_to_delete)
 }
 
-fn get_regex_vec(filters: &Vec<String>) -> Result<Vec<Regex>, Box<dyn std::error::Error>> {
+fn get_regex_vec(filters: &[String]) -> Result<Vec<Regex>, Box<dyn std::error::Error>> {
     let regex_vec = filters
         .iter()
         .map(|f| Regex::new(f))

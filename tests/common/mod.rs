@@ -54,7 +54,7 @@ impl<'a> TestClient<'a> {
             &QueueParams {
                 name,
                 queue_type: QueueType::Classic,
-                durable: false,
+                durable: true,
                 auto_delete: false,
                 exclusive: false,
                 arguments: None,
